@@ -1,0 +1,5 @@
+[{"timestamp": 0.0, "temperature": 25.0, "vibration_x": 1.0, "vibration_y": 1.0, "voltage": 5.0},
+{"timestamp": 10.0, "temperature": 26.0, "vibration_x": 1.5, "vibration_y": 1.2, "voltage": 5.1},
+{"timestamp": 20.0, "temperature": 27.0, "vibration_x": 0.8, "vibration_y": 0.9, "voltage": 5.0},
+{"timestamp": 30.0, "temperature": 26.5, "vibration_x": 1.1, "vibration_y": 1.0, "voltage": 4.9},
+{"timestamp": 40.0, "temperature": 27.2, "vibration_x": 0.9, "vibration_y": 1.1, "voltage": 5.0}]

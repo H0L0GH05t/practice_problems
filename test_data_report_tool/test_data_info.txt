@@ -1,0 +1,62 @@
+File name: test_data.json
+Test Case: Normal data set
+Expected outcome:
+	temperature_drift_count = 11
+	excessive_vibration_count = 4
+	voltage_drop_count = 0
+
+File name: test_data_1.json
+Test Case: No Anomalies
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 0
+	voltage_drop_count = 0
+
+File name: test_data_2.json
+Test Case: Single Anomaly of Each Type
+Expected outcome:
+	temperature_drift_count = 1
+	excessive_vibration_count = 1
+	voltage_drop_count = 1
+
+File name: test_data_3.json
+Test Case: Multiple Temperature Drifts Only
+Expected outcome:
+	temperature_drift_count = 4
+	excessive_vibration_count = 0
+	voltage_drop_count = 0
+
+File name: test_data_4.json
+Test Case: Multiple Excessive Vibrations Only
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 4
+	voltage_drop_count = 0
+
+File name: test_data_5.json
+Test Case: Multiple Sustained Voltage Drops Only
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 0
+	voltage_drop_count = 2
+
+File name: test_data_6.json
+Test Case: Sustained Voltage Drop (Exactly 10 Readings)
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 0
+	voltage_drop_count = 0
+
+File name: test_data_7.json
+Test Case: Sustained Voltage Drop (More than 10 Readings)
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 0
+	voltage_drop_count = 1
+
+File name: test_data_8.json
+Test Case: Short Data Set
+Expected outcome:
+	temperature_drift_count = 0
+	excessive_vibration_count = 0
+	voltage_drop_count = 0
