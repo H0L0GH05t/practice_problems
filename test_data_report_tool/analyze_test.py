@@ -45,10 +45,19 @@ Voltage Drop: If the voltage drops below 4.5V for more than 10 consecutive readi
 
 import math
 import json
+import os
 from collections import deque
 
 
 def check_excessive_vibration(data_line, anomalies, excessive_vibration_count):
+    '''
+    Checks for excessive vibration based on if combined magnitude exceeds 10.0 at any point
+
+    Takes in the current data_line from the current json file and counter and returns
+    updated dictionary and count
+
+    '''
+
     # check vibration against threshold
     magnitude = math.sqrt(data_line['vibration_x']**2 + data_line['vibration_y']**2)
     if magnitude > 10.0:
@@ -60,8 +69,17 @@ def check_excessive_vibration(data_line, anomalies, excessive_vibration_count):
     return anomalies, excessive_vibration_count
 
 
-def check_temperature_drift(data_line, anomalies, temperature_drift_count, time_window):
-    temperatures_in_window = [item['temperature'] for item in time_window]
+def check_temperature_drift(data_line, anomalies, temperature_drift_count,  window_start_time, all_data):
+    '''
+    Checks for over a + or - 5 degrees C temperature shift over a sliding 60 second time window
+
+    Takes in the current data_line from the current json file, counter, time window start, and all accumulated data
+    and returns updated dictionary and count
+
+    '''
+
+    temperatures_in_window = [rec['temperature'] for rec in all_data 
+                            if rec['timestamp'] >= window_start_time and rec['timestamp'] <= data_line['timestamp']]
     if temperatures_in_window:
         max_temp = max(temperatures_in_window)
         min_temp = min(temperatures_in_window)
@@ -73,17 +91,25 @@ def check_temperature_drift(data_line, anomalies, temperature_drift_count, time_
     return anomalies, temperature_drift_count
 
 def check_voltage_drop(data_line, anomalies, voltage_drop_count, previous_voltage, consecutive_lows):
+    '''
+    Checks for sustained voltage drop over 10 consecutive readings
+
+    Takes in the current data_line from the current json file, relevant counters, and previous voltage
+    and returns updated dictionary and counts
+
+    '''
+
     # first data point, so save voltage and move on
     if previous_voltage == 0:
         previous_voltage = data_line['voltage']
 
     # check for low voltage, incrementing count
-    elif previous_voltage < 4.5 and data_line['voltage'] < 4.5 and consecutive_lows < 9:
+    elif previous_voltage < 4.5 and data_line['voltage'] < 4.5 and consecutive_lows < 10:
         consecutive_lows += 1
         previous_voltage = data_line['voltage']
 
     # check for hitting consecutive count, add anomaly
-    elif previous_voltage < 4.5 and data_line['voltage'] < 4.5 and consecutive_lows > 9:
+    elif previous_voltage < 4.5 and data_line['voltage'] < 4.5 and consecutive_lows > 10:
         # triggers anomaly
         previous_voltage = data_line['voltage']
         voltage_drop_count += 1
@@ -97,6 +123,14 @@ def check_voltage_drop(data_line, anomalies, voltage_drop_count, previous_voltag
     return anomalies, voltage_drop_count, previous_voltage, consecutive_lows
 
 def analyze_test_data(test_data):
+    '''
+    Runs check functions for each anomaly type for each data_line in test_data
+
+    Takes in test_data from the current json file, keeps track of counts and returns
+    a dictionary of anomalies found and a summary dictionary with counts of anomaly types
+
+    '''
+
     anomalies = []
     summary = {'temperature_drift_count': 0, 
                'excessive_vibration_count': 0,
@@ -106,7 +140,7 @@ def analyze_test_data(test_data):
     excessive_vibration_count = 0
     voltage_drop_count = 0
 
-    time_window = deque()
+    all_data = []
 
     previous_voltage = 0
     consecutive_lows = 0
@@ -115,14 +149,11 @@ def analyze_test_data(test_data):
     for data_line in test_data:
 
         # Start keeping track of 60s sliding window
-        current_time = data_line['timestamp']
-        time_window.append(data_line)
-        while time_window and time_window[0]['timestamp'] < current_time - 60:
-            time_window.popleft()
+        window_start_time = data_line['timestamp'] - 60
+        all_data.append(data_line)
         
         # check the window for temperature drift
-        if time_window:
-            anomalies, temperature_drift_count = check_temperature_drift(data_line, anomalies, temperature_drift_count, time_window)
+        anomalies, temperature_drift_count = check_temperature_drift(data_line, anomalies, temperature_drift_count, window_start_time, all_data)
 
         anomalies, voltage_drop_count, previous_voltage, consecutive_lows = check_voltage_drop(data_line, anomalies, voltage_drop_count, previous_voltage, consecutive_lows)
 
@@ -135,6 +166,10 @@ def analyze_test_data(test_data):
     return anomalies, summary
 
 def read_data_file(path):
+    '''
+    Reads the file located at path and returns the data from it
+
+    '''
     try:
 
         with open(path, 'r') as file:
@@ -149,17 +184,47 @@ def read_data_file(path):
         print(f"Error: Invalid JSON format in '{path}'")
         return None
 
+def write_report_file(anomalies, summary, test_file, output_dir):
+    '''
+    Writes the resulting report data for a test_data file
+
+    '''
+    try:
+        output_path = f"{test_file[:-5]}_SUMMARY.json"
+
+        with open(path, 'w') as file:
+            data = json.load(file)
+            return data
+
+    except FileNotFoundError:
+        print(f"Error: File not found at '{path}'")
+        return None
+
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format in '{path}'")
+        return None
+
+
+
 
 if __name__ == "__main__":
     
     output_dir = "test_data_reports"
     input_dir = "test_data"
 
-    test_data = read_data_file("test_data.json")
-    if test_data:
-        anomalies, summary = analyze_test_data(test_data)
+    for root, dirs, test_files in os.walk(input_dir):
+        for test_file in test_files:
 
-        print(f"\n\nSummary: {summary}\n")
-        print(f"Anomalies found: {anomalies}\n")
-    else:
-        print("\nCould not process data file!")
+            print(f'\nReading from file: {test_file} ---------------------')
+            test_data = read_data_file(os.path.join(root, test_file))
+
+            if test_data:
+                anomalies, summary = analyze_test_data(test_data)
+
+                # write_report_file(anomalies, summary, test_file, output_dir)
+
+                print(f"\n\nSummary: {summary}\n")
+                print(f"Anomalies found: {anomalies}\n")
+                print(f"---------------------------------------------------------\n")
+            else:
+                print(f"\nCould not process data file {test_file}!")

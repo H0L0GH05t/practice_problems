@@ -60,3 +60,19 @@ Expected outcome:
 	temperature_drift_count = 0
 	excessive_vibration_count = 0
 	voltage_drop_count = 0
+
+
+=======================================
+Current outcomes:
+
+test_data	PASS
+test_data_1	PASS
+test_data_2	FAIL<---- temperature_drift_count is 16 should be 1, voltage_drop_count is 0 should be 1
+test_data_3	PASS
+test_data_4	FAIL<---- excessive_vibration_count is 7 should be 4
+test_data_5	FAIL<---- voltage_droup_count is 0 should be 2
+test_data_6	PASS
+test_data_7	FAIL<---- voltage_drop_count is 0 should be 1
+test_data_8	PASS
+
+TOTAL: 5/9
