@@ -46,7 +46,7 @@ Voltage Drop: If the voltage drops below 4.5V for more than 10 consecutive readi
 import math
 import json
 import os
-from collections import deque
+import pandas as pd
 
 
 def check_excessive_vibration(data_line, anomalies, excessive_vibration_count):
@@ -69,7 +69,7 @@ def check_excessive_vibration(data_line, anomalies, excessive_vibration_count):
     return anomalies, excessive_vibration_count
 
 
-def check_temperature_drift(data_line, anomalies, temperature_drift_count,  window_start_time, all_data):
+def check_temperature_drift(data_line, anomalies, temperature_drift_count, all_data):
     '''
     Checks for over a + or - 5 degrees C temperature shift over a sliding 60 second time window
 
@@ -78,16 +78,25 @@ def check_temperature_drift(data_line, anomalies, temperature_drift_count,  wind
 
     '''
 
-    temperatures_in_window = [rec['temperature'] for rec in all_data 
-                            if rec['timestamp'] >= window_start_time and rec['timestamp'] <= data_line['timestamp']]
-    if temperatures_in_window:
-        max_temp = max(temperatures_in_window)
-        min_temp = min(temperatures_in_window)
-        if abs(max_temp - min_temp) > 5:
-            temperature_drift_count += 1
-            anomalies.append({'type': 'temperature_drift', 
-                              'timestamp': data_line['timestamp'], 
-                              'details': f'Temperature Change: {abs(max_temp - min_temp)} Degrees C'})
+    if len(all_data) > 1:
+        df = pd.DataFrame(all_data)
+        series = df['temperature']
+        differences = series.rolling(window=2).apply(lambda x: x.iloc[-1] - x.iloc[0])
+        differences.dropna()
+
+        for diff in differences:
+            if diff > 5 or diff < -5:
+                temperature_drift_count += 1
+                anomalies.append({'type': 'temperature_drift', 
+                                  'timestamp': data_line['timestamp'], 
+                                  'details': f'Temperature Changed by {diff} Degrees C'})
+                break
+
+        # TODO: check if 60 seconds has passed and reset window if so, currently 12 rows consecutively is 5 seconds each, so 12 for 60
+        if len(all_data) > 12:
+            all_data = []
+
+
     return anomalies, temperature_drift_count
 
 def check_voltage_drop(data_line, anomalies, voltage_drop_count, previous_voltage, consecutive_lows):
@@ -148,12 +157,11 @@ def analyze_test_data(test_data):
     # iterate test data
     for data_line in test_data:
 
-        # Start keeping track of 60s sliding window
-        window_start_time = data_line['timestamp'] - 60
+        # Start keeping track of data for the window
         all_data.append(data_line)
         
         # check the window for temperature drift
-        anomalies, temperature_drift_count = check_temperature_drift(data_line, anomalies, temperature_drift_count, window_start_time, all_data)
+        anomalies, temperature_drift_count = check_temperature_drift(data_line, anomalies, temperature_drift_count, all_data)
 
         anomalies, voltage_drop_count, previous_voltage, consecutive_lows = check_voltage_drop(data_line, anomalies, voltage_drop_count, previous_voltage, consecutive_lows)
 
