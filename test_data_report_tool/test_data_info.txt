@@ -65,7 +65,7 @@ Expected outcome:
 =======================================
 Current outcomes:
 
-test_data	PASS
+test_data	PASS?<--- one extra temperature_drift_count is being found (12 instead of 11) needs verification
 test_data_1	PASS
 test_data_2	FAIL<---- temperature_drift_count is 16 should be 1, voltage_drop_count is 0 should be 1
 test_data_3	PASS
